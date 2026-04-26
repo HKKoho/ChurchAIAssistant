@@ -149,28 +149,24 @@ function ProviderModelFields({
 
       <div className="flex flex-col gap-2">
         <Label htmlFor={`${idPrefix}-model`}>Model</Label>
-        {models.length > 0 ? (
-          <select
-            name="model"
-            id={`${idPrefix}-model`}
-            className="rounded-md border bg-background px-3 py-2 text-sm"
-            defaultValue={defaultModel ?? currentProvider?.defaultModel ?? ''}
-          >
+        <Input
+          id={`${idPrefix}-model`}
+          name="model"
+          list={`${idPrefix}-model-suggestions`}
+          placeholder={currentProvider?.defaultModel || 'model-name'}
+          defaultValue={defaultModel ?? currentProvider?.defaultModel ?? ''}
+          required
+        />
+        {models.length > 0 && (
+          <datalist id={`${idPrefix}-model-suggestions`}>
             {models.map((m) => (
-              <option key={m} value={m}>
-                {m}
-              </option>
+              <option key={m} value={m} />
             ))}
-          </select>
-        ) : (
-          <Input
-            id={`${idPrefix}-model`}
-            name="model"
-            placeholder={currentProvider?.defaultModel ?? 'model-name'}
-            defaultValue={defaultModel ?? currentProvider?.defaultModel ?? ''}
-            required
-          />
+          </datalist>
         )}
+        <p className="text-xs text-muted-foreground">
+          Type any model name. Predefined models appear as suggestions.
+        </p>
       </div>
     </>
   );

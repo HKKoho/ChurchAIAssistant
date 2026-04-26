@@ -12,6 +12,12 @@ vi.mock('@anthropic-ai/sdk', () => ({
   })),
 }));
 
+vi.mock('@google/genai', () => ({
+  GoogleGenAI: vi.fn().mockImplementation(() => ({
+    models: { generateContent: vi.fn() },
+  })),
+}));
+
 vi.mock('@clawix/shared', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@clawix/shared')>();
   return {
@@ -29,6 +35,7 @@ import { createProvider } from '../provider-factory.js';
 import { OpenAIProvider } from '../openai-provider.js';
 import { AnthropicProvider } from '../anthropic-provider.js';
 import { OpenAIResponsesProvider } from '../openai-responses-provider.js';
+import { GeminiProvider } from '../gemini-provider.js';
 
 describe('createProvider', () => {
   const API_KEY = 'test-api-key';
@@ -58,6 +65,18 @@ describe('createProvider', () => {
   it('uses custom baseURL for zai-coding when provided', () => {
     const provider = createProvider('zai-coding', API_KEY, 'https://custom.z.ai/v1');
     expect(provider).toBeInstanceOf(OpenAIProvider);
+  });
+
+  it('creates a GeminiProvider for "gemini"', () => {
+    const provider = createProvider('gemini', API_KEY);
+    expect(provider).toBeInstanceOf(GeminiProvider);
+    expect(provider.name).toBe('gemini');
+  });
+
+  it('creates a GeminiProvider with a custom baseURL', () => {
+    const provider = createProvider('gemini', API_KEY, 'https://custom.example.com/v1beta/');
+    expect(provider).toBeInstanceOf(GeminiProvider);
+    expect(provider.name).toBe('gemini');
   });
 
   it('creates an OpenAIProvider for unknown provider with baseURL (custom)', () => {

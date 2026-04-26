@@ -75,6 +75,28 @@ describe('isToolCallRequest', () => {
   it('should return false when arguments is an array', () => {
     expect(isToolCallRequest({ id: '1', name: 'foo', arguments: [1, 2] })).toBe(false);
   });
+
+  it('should return true for a ToolCallRequest with providerExtra', () => {
+    const valid: ToolCallRequest = {
+      id: 'call_789',
+      name: 'search',
+      arguments: { q: 'test' },
+      providerExtra: { google: { thoughtSignature: 'sig-abc-123' } },
+    };
+
+    expect(isToolCallRequest(valid)).toBe(true);
+  });
+
+  it('should accept arbitrary providerExtra payload shapes', () => {
+    const valid: ToolCallRequest = {
+      id: 'call_999',
+      name: 'noop',
+      arguments: {},
+      providerExtra: { anything: 'goes', nested: { deeply: true } },
+    };
+
+    expect(isToolCallRequest(valid)).toBe(true);
+  });
 });
 
 describe('createLLMResponse', () => {

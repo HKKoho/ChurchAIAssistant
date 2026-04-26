@@ -46,6 +46,9 @@ services:
     image: clawix-api:latest
     container_name: clawix-api
     restart: unless-stopped
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     ports:
       - '3001:3001'
     env_file: .env

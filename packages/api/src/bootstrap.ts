@@ -224,7 +224,7 @@ async function main(): Promise<void> {
         model: defaultModel,
         maxTokensPerRun: 100000,
         containerConfig: {
-          image: 'clawix-agent:latest',
+          image: process.env['AGENT_CONTAINER_IMAGE'] ?? 'clawix-agent:latest',
           cpuLimit: '1',
           memoryLimit: '512m',
           timeoutSeconds: 300,
@@ -235,6 +235,34 @@ async function main(): Promise<void> {
       },
     }));
   console.log(`[bootstrap]   Primary agent: ${primaryAgent.name}`);
+
+  // --- Default worker (only if none exists) ---
+  const existingDefaultWorker = await prisma.agentDefinition.findFirst({
+    where: { name: 'default-worker', role: 'worker' },
+  });
+  if (!existingDefaultWorker) {
+    await prisma.agentDefinition.create({
+      data: {
+        name: 'default-worker',
+        description: 'Default worker agent for anonymous sub-agent tasks',
+        systemPrompt: 'Complete the assigned task thoroughly and report the result.',
+        role: 'worker',
+        provider: defaultProvider,
+        model: defaultModel,
+        maxTokensPerRun: 50000,
+        containerConfig: {
+          image: process.env['AGENT_CONTAINER_IMAGE'] ?? 'clawix-agent:latest',
+          cpuLimit: '0.5',
+          memoryLimit: '256m',
+          timeoutSeconds: 300,
+          readOnlyRootfs: false,
+          allowedMounts: [],
+        },
+        isActive: true,
+      },
+    });
+    console.log('[bootstrap]   Default worker seeded');
+  }
 
   // --- Bind admin to primary agent ---
   await prisma.userAgent.upsert({

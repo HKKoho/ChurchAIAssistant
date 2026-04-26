@@ -5,10 +5,17 @@ import multipart from '@fastify/multipart';
 import { createLogger } from '@clawix/shared';
 import { AppModule } from './app.module.js';
 import { registerSecurityPlugins } from './common/security.config.js';
+import { configureGlobalHttpDispatcher } from './common/http-dispatcher.js';
 
 const logger = createLogger('api');
 
 async function bootstrap() {
+  const httpConfig = configureGlobalHttpDispatcher();
+  logger.info(
+    { connectTimeoutMs: httpConfig.connectTimeoutMs },
+    'Global undici dispatcher configured',
+  );
+
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
     new FastifyAdapter({

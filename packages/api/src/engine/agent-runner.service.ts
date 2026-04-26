@@ -187,6 +187,7 @@ export class AgentRunnerService {
         userId,
         agentDefinitionId,
         sessionId: isSubAgent ? undefined : inputSessionId,
+        ...(!isSubAgent && options.channelId ? { channelId: options.channelId } : {}),
       });
       store = new SessionMessageStore(this.sessionManager, session.id);
     }

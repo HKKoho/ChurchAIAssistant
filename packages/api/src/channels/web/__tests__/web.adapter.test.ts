@@ -189,6 +189,32 @@ describe('createWebAdapter', () => {
     });
   });
 
+  describe('sendError()', () => {
+    it('sends an error event with code and message to all open sockets for recipient', async () => {
+      const s1 = makeMockSocket();
+      const s2 = makeMockSocket();
+      adapter.addConnection('user-1', s1 as never);
+      adapter.addConnection('user-1', s2 as never);
+
+      await adapter.sendError!('user-1', 'POLICY_DENIED', 'Provider not allowed');
+
+      expect(s1.send).toHaveBeenCalledOnce();
+      expect(s2.send).toHaveBeenCalledOnce();
+
+      const payload = JSON.parse(s1.send.mock.calls[0]![0] as string) as {
+        type: string;
+        payload: { code: string; message: string };
+      };
+      expect(payload.type).toBe('error');
+      expect(payload.payload.code).toBe('POLICY_DENIED');
+      expect(payload.payload.message).toBe('Provider not allowed');
+    });
+
+    it('does not throw when recipient has no connections', async () => {
+      await expect(adapter.sendError!('nobody', 'CODE', 'message')).resolves.toBeUndefined();
+    });
+  });
+
   describe('sendTyping()', () => {
     it('sends typing.start to all open sockets for recipient', async () => {
       const socket = makeMockSocket();

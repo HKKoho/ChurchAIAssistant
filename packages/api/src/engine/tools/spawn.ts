@@ -4,7 +4,7 @@
  * Supports two modes:
  *   1. Named spawn: agent_name is provided → look up a worker AgentDefinition by name.
  *   2. Anonymous spawn: agent_name omitted → use the default-worker definition
- *      (created on first use from SUBAGENT_PROVIDER / SUBAGENT_MODEL env vars).
+ *      (provider and model resolved from the configured default ProviderConfig).
  */
 import { createLogger } from '@clawix/shared';
 
@@ -13,12 +13,6 @@ import type { AgentDefinitionRepository } from '../../db/agent-definition.reposi
 import type { AgentRunRepository } from '../../db/agent-run.repository.js';
 
 const logger = createLogger('engine:tools:spawn');
-
-/** Default provider for anonymous sub-agents, configurable via env. */
-const DEFAULT_SUBAGENT_PROVIDER = process.env['SUBAGENT_PROVIDER'] ?? 'anthropic';
-
-/** Default model for anonymous sub-agents, configurable via env. */
-const DEFAULT_SUBAGENT_MODEL = process.env['SUBAGENT_MODEL'] ?? 'claude-haiku-4-5-20251001';
 
 /** Minimal interface for TaskExecutorService (avoids circular import). */
 interface TaskSubmitter {
@@ -108,10 +102,7 @@ export function createSpawnTool(
         displayName = agentName;
       } else {
         // Anonymous spawn: use the default worker
-        const defaultWorker = await agentDefRepo.findOrCreateDefaultWorker(
-          DEFAULT_SUBAGENT_PROVIDER,
-          DEFAULT_SUBAGENT_MODEL,
-        );
+        const defaultWorker = await agentDefRepo.findOrCreateDefaultWorker();
         agentDefId = defaultWorker.id;
         displayName = 'default-worker';
       }
