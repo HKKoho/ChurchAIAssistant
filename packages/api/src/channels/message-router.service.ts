@@ -11,6 +11,17 @@ import { SessionManagerService } from '../engine/session-manager.service.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { CommandService } from '../commands/command.service.js';
 
+import { classifyAgentError } from './agent-error-message.js';
+
+const ERROR_CODE_BY_CATEGORY: Record<string, string> = {
+  network: 'NETWORK_ERROR',
+  auth: 'AUTH_ERROR',
+  rate_limit: 'RATE_LIMITED',
+  bad_request: 'BAD_REQUEST',
+  policy: 'POLICY_DENIED',
+  unknown: 'AGENT_ERROR',
+};
+
 const logger = createLogger('channels:router');
 
 @Injectable()
@@ -90,23 +101,18 @@ export class MessageRouterService {
       return;
     }
 
-    // 5. Get or create session
-    const session = await this.sessionManager.getOrCreate({
-      userId: user.id,
-      agentDefinitionId: userAgent.agentDefinitionId,
-      channelId: channel.id,
-    });
-
-    // 6. Send typing indicator (no-op if adapter doesn't support it)
+    // 5. Send typing indicator (no-op if adapter doesn't support it)
     if (channel.sendTyping) {
       await channel.sendTyping(senderId).catch(() => {});
     }
 
-    // 7. Run agent
+    // 6. Run agent — session creation is delegated to agent-runner so that
+    //    pre-execution validation failures (provider blocked, budget exceeded,
+    //    inactive agent) don't leave orphan empty sessions in the database.
     try {
       const result = await this.agentRunner.run({
         agentDefinitionId: userAgent.agentDefinitionId,
-        sessionId: session.id,
+        channelId: channel.id,
         userId: user.id,
         input: text,
         channel: channel.type,
@@ -116,28 +122,44 @@ export class MessageRouterService {
 
       const responseText = result.output ?? 'Agent completed without output.';
 
-      // 8. Send response with metadata for WebSocket delivery
+      // 7. Send response with metadata for WebSocket delivery
       await channel.sendMessage({
         recipientId: senderId,
         text: responseText,
         metadata: {
           messageId: result.responseMessageId ?? result.agentRunId,
-          sessionId: session.id,
+          ...(result.sessionId ? { sessionId: result.sessionId } : {}),
         },
       });
 
-      // 9. Send typing stop
+      // 8. Send typing stop
       if (channel.sendTypingStop) {
         await channel.sendTypingStop(senderId).catch(() => {});
       }
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      logger.error({ userId: user.id, error: errorMessage }, 'Agent execution failed');
+      const cause = error instanceof Error ? (error as { cause?: unknown }).cause : undefined;
+      const causeInfo =
+        cause instanceof Error
+          ? { message: cause.message, code: (cause as { code?: string }).code }
+          : undefined;
+      const classified = classifyAgentError(error);
+      logger.error(
+        { userId: user.id, err: error, cause: causeInfo, category: classified.category },
+        'Agent execution failed',
+      );
 
-      await channel.sendMessage({
-        recipientId: senderId,
-        text: 'Something went wrong while processing your message. Please try again.',
-      });
+      const errorCode = ERROR_CODE_BY_CATEGORY[classified.category] ?? 'AGENT_ERROR';
+
+      // Prefer a structured error event when the channel supports it (web).
+      // Fall back to a plain text message on channels that don't (telegram).
+      if (channel.sendError) {
+        await channel.sendError(senderId, errorCode, classified.text);
+      } else {
+        await channel.sendMessage({
+          recipientId: senderId,
+          text: classified.text,
+        });
+      }
 
       // Send typing stop on error too
       if (channel.sendTypingStop) {

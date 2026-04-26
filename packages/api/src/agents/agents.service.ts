@@ -143,14 +143,18 @@ export class AgentsService {
   }
 
   async listConfiguredProviders() {
-    // Only return providers that have been configured with an API key
+    // Fetch all enabled provider configs from DB
     const configs = await this.prisma.providerConfig.findMany({
       where: { isEnabled: true },
-      select: { provider: true },
+      select: { provider: true, displayName: true },
+      orderBy: [{ isDefault: 'desc' }, { sortOrder: 'asc' }],
     });
+
+    // Build a map of configured provider names for quick lookup
     const configuredNames = new Set(configs.map((c) => c.provider));
 
-    return listProviders()
+    // Get built-in providers that are configured
+    const builtinProviders = listProviders()
       .filter((p) => p.name !== 'custom' && configuredNames.has(p.name))
       .map((p) => ({
         name: p.name,
@@ -158,5 +162,18 @@ export class AgentsService {
         defaultModel: p.defaultModel,
         models: (p.pricing ?? []).map((m) => m.model),
       }));
+
+    // Get custom providers (in DB but not in built-in list)
+    const builtinNames = new Set(listProviders().map((p) => p.name));
+    const customProviders = configs
+      .filter((c) => !builtinNames.has(c.provider))
+      .map((c) => ({
+        name: c.provider,
+        displayName: c.displayName,
+        defaultModel: '',
+        models: [] as string[], // Empty array allows custom model input in UI
+      }));
+
+    return [...builtinProviders, ...customProviders];
   }
 }

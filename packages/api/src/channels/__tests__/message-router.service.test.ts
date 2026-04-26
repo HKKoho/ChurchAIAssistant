@@ -68,11 +68,11 @@ describe('MessageRouterService', () => {
     );
   }
 
-  it('routes message to agent when user is authorized', async () => {
+  it('routes message to agent without pre-creating a session', async () => {
     const user = { id: 'user-1', telegramId: '123456', isActive: true };
     const userAgent = { agentDefinitionId: 'agent-1' };
-    const session = { id: 'session-1' };
     const runResult = {
+      sessionId: 'session-1',
       output: 'Hello human',
       status: 'completed',
       responseMessageId: 'msg-abc',
@@ -81,7 +81,6 @@ describe('MessageRouterService', () => {
 
     mockUserRepo.findByTelegramId.mockResolvedValue(user);
     mockUserAgentRepo.findByUserId.mockResolvedValue(userAgent);
-    mockSessionManager.getOrCreate.mockResolvedValue(session);
     mockAgentRunner.run.mockResolvedValue(runResult);
 
     const channel = mockChannel();
@@ -89,10 +88,14 @@ describe('MessageRouterService', () => {
 
     await router.handleInbound(mockInbound(), channel);
 
+    // Session creation is delegated to agent-runner, so the router
+    // must not pre-create one for the regular agent path.
+    expect(mockSessionManager.getOrCreate).not.toHaveBeenCalled();
+
     expect(mockAgentRunner.run).toHaveBeenCalledWith(
       expect.objectContaining({
         agentDefinitionId: 'agent-1',
-        sessionId: 'session-1',
+        channelId: 'channel-1',
         userId: 'user-1',
         input: 'Hello agent',
       }),
@@ -110,9 +113,9 @@ describe('MessageRouterService', () => {
   it('falls back to agentRunId when responseMessageId is missing', async () => {
     const user = { id: 'user-1', telegramId: '123456', isActive: true };
     const userAgent = { agentDefinitionId: 'agent-1' };
-    const session = { id: 'session-1' };
     const runResult = {
       agentRunId: 'run-xyz',
+      sessionId: 'session-1',
       output: 'Response',
       status: 'completed',
       tokenUsage: { input: 10, output: 5 },
@@ -120,7 +123,6 @@ describe('MessageRouterService', () => {
 
     mockUserRepo.findByTelegramId.mockResolvedValue(user);
     mockUserAgentRepo.findByUserId.mockResolvedValue(userAgent);
-    mockSessionManager.getOrCreate.mockResolvedValue(session);
     mockAgentRunner.run.mockResolvedValue(runResult);
 
     const channel = mockChannel();
@@ -214,7 +216,7 @@ describe('MessageRouterService', () => {
     expect(mockAgentRunner.run).not.toHaveBeenCalled();
   });
 
-  it('sends error message when agent execution fails', async () => {
+  it('sends error message via sendMessage when agent fails on a channel without sendError', async () => {
     mockUserRepo.findByTelegramId.mockResolvedValue({
       id: 'user-1',
       isActive: true,
@@ -222,7 +224,6 @@ describe('MessageRouterService', () => {
     mockUserAgentRepo.findByUserId.mockResolvedValue({
       agentDefinitionId: 'agent-1',
     });
-    mockSessionManager.getOrCreate.mockResolvedValue({ id: 'session-1' });
     mockAgentRunner.run.mockRejectedValue(new Error('LLM timeout'));
 
     const channel = mockChannel();
@@ -237,11 +238,60 @@ describe('MessageRouterService', () => {
     );
   });
 
+  it('routes errors through channel.sendError when supported, with policy code for policy errors', async () => {
+    mockUserRepo.findByTelegramId.mockResolvedValue({
+      id: 'user-1',
+      isActive: true,
+    });
+    mockUserAgentRepo.findByUserId.mockResolvedValue({
+      agentDefinitionId: 'agent-1',
+    });
+    mockAgentRunner.run.mockRejectedValue(
+      new Error("Provider 'openai' is not allowed by policy 'standard'"),
+    );
+
+    const channel: ChannelAdapter = {
+      ...mockChannel(),
+      sendError: vi.fn().mockResolvedValue(undefined),
+    };
+    const router = createRouter();
+
+    await router.handleInbound(mockInbound(), channel);
+
+    expect(channel.sendError).toHaveBeenCalledWith(
+      '123456',
+      'POLICY_DENIED',
+      expect.stringMatching(/policy|administrator|plan/i),
+    );
+    // No empty session leaked into the DB.
+    expect(mockSessionManager.getOrCreate).not.toHaveBeenCalled();
+    // Fallback path is not used when sendError exists.
+    expect(channel.sendMessage).not.toHaveBeenCalled();
+  });
+
+  it('does not pre-create a session when the agent run rejects', async () => {
+    mockUserRepo.findByTelegramId.mockResolvedValue({
+      id: 'user-1',
+      isActive: true,
+    });
+    mockUserAgentRepo.findByUserId.mockResolvedValue({
+      agentDefinitionId: 'agent-1',
+    });
+    mockAgentRunner.run.mockRejectedValue(
+      new Error("Provider 'openai' is not allowed by policy 'standard'"),
+    );
+
+    const router = createRouter();
+    await router.handleInbound(mockInbound(), mockChannel());
+
+    expect(mockSessionManager.getOrCreate).not.toHaveBeenCalled();
+  });
+
   it('should pass channel, chatId, and userName to agentRunner.run', async () => {
     const user = { id: 'user-1', telegramId: '123456', isActive: true };
     const userAgent = { agentDefinitionId: 'agent-1' };
-    const session = { id: 'session-1' };
     const runResult = {
+      sessionId: 'session-1',
       output: 'Hello human',
       status: 'completed',
       tokenUsage: { input: 10, output: 5 },
@@ -249,7 +299,6 @@ describe('MessageRouterService', () => {
 
     mockUserRepo.findByTelegramId.mockResolvedValue(user);
     mockUserAgentRepo.findByUserId.mockResolvedValue(userAgent);
-    mockSessionManager.getOrCreate.mockResolvedValue(session);
     mockAgentRunner.run.mockResolvedValue(runResult);
 
     const channel = mockChannel();
@@ -271,8 +320,8 @@ describe('MessageRouterService', () => {
     const user = { id: 'user-1', telegramId: '123456', isActive: true };
     mockUserRepo.findByTelegramId.mockResolvedValue(user);
     mockUserAgentRepo.findByUserId.mockResolvedValue({ agentDefinitionId: 'agent-1' });
-    mockSessionManager.getOrCreate.mockResolvedValue({ id: 'session-1' });
     mockAgentRunner.run.mockResolvedValue({
+      sessionId: 'session-1',
       output: 'Response',
       status: 'completed',
       tokenUsage: { input: 0, output: 0 },
@@ -289,8 +338,8 @@ describe('MessageRouterService', () => {
   it('routes web channel message using findById lookup', async () => {
     const user = { id: 'user-1', isActive: true };
     const userAgent = { agentDefinitionId: 'agent-1' };
-    const session = { id: 'session-1' };
     const runResult = {
+      sessionId: 'session-1',
       output: 'Hello from agent',
       status: 'completed',
       tokenUsage: { input: 10, output: 5 },
@@ -298,7 +347,6 @@ describe('MessageRouterService', () => {
 
     mockUserRepo.findById.mockResolvedValue(user);
     mockUserAgentRepo.findByUserId.mockResolvedValue(userAgent);
-    mockSessionManager.getOrCreate.mockResolvedValue(session);
     mockAgentRunner.run.mockResolvedValue(runResult);
 
     const router = createRouter();
@@ -315,8 +363,8 @@ describe('MessageRouterService', () => {
   it('uses findByTelegramId for telegram channel type', async () => {
     const user = { id: 'user-1', telegramId: '123456', isActive: true };
     const userAgent = { agentDefinitionId: 'agent-1' };
-    const session = { id: 'session-1' };
     const runResult = {
+      sessionId: 'session-1',
       output: 'Hello',
       status: 'completed',
       tokenUsage: { input: 10, output: 5 },
@@ -324,7 +372,6 @@ describe('MessageRouterService', () => {
 
     mockUserRepo.findByTelegramId.mockResolvedValue(user);
     mockUserAgentRepo.findByUserId.mockResolvedValue(userAgent);
-    mockSessionManager.getOrCreate.mockResolvedValue(session);
     mockAgentRunner.run.mockResolvedValue(runResult);
 
     const router = createRouter();

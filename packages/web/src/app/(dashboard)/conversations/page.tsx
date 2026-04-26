@@ -42,10 +42,13 @@ export default function ConversationsPage() {
     loadingMessages,
     loadingMore,
     hasMore,
+    loadingMoreSessions,
+    hasMoreSessions,
     selectSession,
     sendMessage,
     startNewChat,
     loadMore,
+    loadMoreSessions,
     refreshSessions,
   } = useChat();
 
@@ -102,8 +105,11 @@ export default function ConversationsPage() {
           sessions={sessions}
           selectedId={currentSessionId}
           loading={loadingSessions}
+          loadingMore={loadingMoreSessions}
+          hasMore={hasMoreSessions}
           onSelect={(id) => void selectSession(id)}
           onNewChat={(archiveCurrent) => void startNewChat(archiveCurrent)}
+          onLoadMore={() => void loadMoreSessions()}
           onSessionUpdated={() => void refreshSessions()}
         />
       </div>

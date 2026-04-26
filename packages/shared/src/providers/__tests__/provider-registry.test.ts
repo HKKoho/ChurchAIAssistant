@@ -169,6 +169,60 @@ describe('provider-registry (zai-coding + defaultBaseUrl)', () => {
   });
 });
 
+describe('Gemini provider spec', () => {
+  it('is registered by name', () => {
+    const spec = findProviderByName('gemini');
+    expect(spec).not.toBeNull();
+    expect(spec?.displayName).toBe('Google Gemini');
+    expect(spec?.envKey).toBe('GEMINI_API_KEY');
+    expect(spec?.defaultModel).toBe('gemini-3-flash-preview');
+    expect(spec?.supportsTools).toBe(true);
+  });
+
+  it('matches gemini- model prefix for both 2.5 and 3.x families', () => {
+    expect(findProviderByModel('gemini-2.5-pro')?.name).toBe('gemini');
+    expect(findProviderByModel('gemini-2.5-flash')?.name).toBe('gemini');
+    expect(findProviderByModel('gemini-2.5-flash-lite')?.name).toBe('gemini');
+    expect(findProviderByModel('gemini-3-pro-preview')?.name).toBe('gemini');
+    expect(findProviderByModel('gemini-3-flash-preview')?.name).toBe('gemini');
+    expect(findProviderByModel('gemini-3.1-pro-preview')?.name).toBe('gemini');
+  });
+
+  it('estimates cost for gemini-2.5-pro', () => {
+    const cost = estimateCost('gemini', 'gemini-2.5-pro', 1_000_000, 1_000_000);
+    expect(cost).toBeCloseTo(1.25 + 10.0);
+  });
+
+  it('estimates cost for gemini-2.5-flash', () => {
+    const cost = estimateCost('gemini', 'gemini-2.5-flash', 1_000_000, 1_000_000);
+    expect(cost).toBeCloseTo(0.3 + 2.5);
+  });
+
+  it('estimates cost for gemini-2.5-flash-lite', () => {
+    const cost = estimateCost('gemini', 'gemini-2.5-flash-lite', 1_000_000, 1_000_000);
+    expect(cost).toBeCloseTo(0.1 + 0.4);
+  });
+
+  it('estimates cost for gemini-3-pro-preview (placeholder pricing — verify before GA)', () => {
+    const cost = estimateCost('gemini', 'gemini-3-pro-preview', 1_000_000, 1_000_000);
+    expect(cost).not.toBeNull();
+  });
+
+  it('estimates cost for gemini-3-flash-preview (placeholder pricing — verify before GA)', () => {
+    const cost = estimateCost('gemini', 'gemini-3-flash-preview', 1_000_000, 1_000_000);
+    expect(cost).not.toBeNull();
+  });
+
+  it('matches versioned model variants via longest-prefix match', () => {
+    const cost = estimateCost('gemini', 'gemini-2.5-pro-preview-06-05', 1_000_000, 0);
+    expect(cost).toBeCloseTo(1.25);
+  });
+
+  it('appears in listProviders()', () => {
+    expect(listProviders().some((p) => p.name === 'gemini')).toBe(true);
+  });
+});
+
 describe('estimateCost', () => {
   it('should calculate cost for claude-opus-4', () => {
     // $15 per M input, $75 per M output

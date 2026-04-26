@@ -50,6 +50,16 @@ export interface ChannelAdapter {
   sendTyping?(recipientId: string): Promise<void>;
   sendTypingStop?(recipientId: string): Promise<void>;
 
+  /**
+   * Send an out-of-band error to the recipient.
+   *
+   * Channels that support a structured error path (e.g. WebSocket) should send
+   * this through that path so the client can render it as an error rather than
+   * an assistant message. Channels without a structured error path should fall
+   * back to sending the message text.
+   */
+  sendError?(recipientId: string, code: string, message: string): Promise<void>;
+
   onMessage(handler: MessageHandler): void;
 }
 

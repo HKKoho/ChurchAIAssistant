@@ -5,6 +5,7 @@
 import type { LLMProvider } from '@clawix/shared';
 
 import { AnthropicProvider } from './anthropic-provider.js';
+import { GeminiProvider } from './gemini-provider.js';
 import { OpenAIProvider } from './openai-provider.js';
 import { OpenAIResponsesProvider } from './openai-responses-provider.js';
 import { isCodexModel } from './openai-responses-utils.js';
@@ -14,7 +15,7 @@ const ZAI_CODING_DEFAULT_BASE_URL = 'https://api.z.ai/api/coding/paas/v4';
 /**
  * Instantiate an {@link LLMProvider} by provider name.
  *
- * Known providers: `'anthropic'`, `'openai'`, `'zai-coding'`.
+ * Known providers: `'anthropic'`, `'gemini'`, `'openai'`, `'zai-coding'`.
  * Any other name is treated as an OpenAI-compatible custom provider
  * and requires a `baseURL`.
  *
@@ -40,6 +41,9 @@ export function createProvider(
 
     case 'zai-coding':
       return new OpenAIProvider(apiKey, baseURL ?? ZAI_CODING_DEFAULT_BASE_URL);
+
+    case 'gemini':
+      return new GeminiProvider(apiKey, baseURL);
 
     default:
       if (!baseURL) {

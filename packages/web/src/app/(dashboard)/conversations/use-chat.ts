@@ -4,6 +4,23 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { authFetch, getAccessToken } from '@/lib/auth';
 
+/**
+ * Merge incoming sessions into the existing list, sorted by createdAt desc.
+ * Existing entries are updated in place; new entries are added; entries that
+ * already exist but aren't in `incoming` are preserved (so paginated refetches
+ * don't drop older sessions that fell off the first page).
+ */
+function upsertSessions(prev: ChatSession[], incoming: ChatSession[]): ChatSession[] {
+  if (incoming.length === 0) return prev;
+  const map = new Map(prev.map((s) => [s.id, s]));
+  for (const s of incoming) {
+    map.set(s.id, s);
+  }
+  return Array.from(map.values()).sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+  );
+}
+
 function debounce<T extends (...args: unknown[]) => void>(fn: T, ms: number): T {
   let timer: ReturnType<typeof setTimeout> | undefined;
   return ((...args: unknown[]) => {
@@ -95,7 +112,11 @@ export function useChat() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const [messagePage, setMessagePage] = useState(1);
+  const [sessionPage, setSessionPage] = useState(1);
+  const [hasMoreSessions, setHasMoreSessions] = useState(false);
+  const [loadingMoreSessions, setLoadingMoreSessions] = useState(false);
   const MESSAGE_LIMIT = 20;
+  const SESSIONS_PER_PAGE = 50;
 
   const [webChannelId, setWebChannelId] = useState<string | null>(null);
   const [channelResolved, setChannelResolved] = useState(false);
@@ -117,14 +138,17 @@ export function useChat() {
     currentSessionIdRef.current = currentSessionId;
   }, [currentSessionId]);
 
-  /* ---- fetch sessions ---- */
+  /* ---- fetch sessions (merges into existing list to avoid dropping older entries) ---- */
   const fetchSessions = useCallback(async () => {
     setLoadingSessions(true);
     try {
       const channelParam = webChannelId ? `&channelId=${webChannelId}` : '';
-      const url = `/api/v1/chat/sessions?limit=50&includeArchived=true${channelParam}`;
+      const url = `/api/v1/chat/sessions?limit=${SESSIONS_PER_PAGE}&page=1&includeArchived=true${channelParam}`;
       const res = await authFetch<PaginatedSessions>(url);
-      setSessions(Array.isArray(res.data) ? res.data : []);
+      const incoming = Array.isArray(res.data) ? res.data : [];
+      setSessions((prev) => upsertSessions(prev, incoming));
+      setSessionPage(1);
+      setHasMoreSessions(res.meta.total > SESSIONS_PER_PAGE);
     } catch {
       setError('Failed to load sessions');
     } finally {
@@ -132,10 +156,33 @@ export function useChat() {
     }
   }, [webChannelId]);
 
-  // Debounced session refresh to avoid excessive API calls
+  /* ---- load more sessions (older pages, merged in) ---- */
+  const loadMoreSessions = useCallback(async () => {
+    if (loadingMoreSessions || !hasMoreSessions) return;
+    setLoadingMoreSessions(true);
+    const nextPage = sessionPage + 1;
+    try {
+      const channelParam = webChannelId ? `&channelId=${webChannelId}` : '';
+      const url = `/api/v1/chat/sessions?limit=${SESSIONS_PER_PAGE}&page=${nextPage}&includeArchived=true${channelParam}`;
+      const res = await authFetch<PaginatedSessions>(url);
+      const incoming = Array.isArray(res.data) ? res.data : [];
+      setSessions((prev) => upsertSessions(prev, incoming));
+      setSessionPage(nextPage);
+      setHasMoreSessions(nextPage * SESSIONS_PER_PAGE < res.meta.total);
+    } catch {
+      // silent — user can retry by scrolling again
+    } finally {
+      setLoadingMoreSessions(false);
+    }
+  }, [webChannelId, sessionPage, loadingMoreSessions, hasMoreSessions]);
+
+  // Debounced session refresh to avoid excessive API calls.
+  // Routes through fetchSessionsRef so callers captured by stale closures
+  // (e.g. ws.onmessage inside connectWebSocket's []-deps callback) still
+  // invoke the latest fetchSessions — which closes over the resolved webChannelId.
   const debouncedFetchSessions = useMemo(
-    () => debounce(() => void fetchSessions(), 2000),
-    [fetchSessions],
+    () => debounce(() => void fetchSessionsRef.current?.(), 2000),
+    [],
   );
 
   // Keep ref in sync so WebSocket handler can call latest fetchSessions without dependency.
@@ -313,6 +360,10 @@ export function useChat() {
         case 'error':
           setError(parsed.payload.message);
           setIsInitializing(false);
+          pendingCountRef.current = 0;
+          setHasPending(false);
+          setIsTyping(false);
+          if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
           break;
 
         case 'pong':
@@ -556,10 +607,13 @@ export function useChat() {
     loadingMessages,
     loadingMore,
     hasMore,
+    loadingMoreSessions,
+    hasMoreSessions,
     selectSession,
     sendMessage,
     startNewChat,
     loadMore,
+    loadMoreSessions,
     refreshSessions: fetchSessions,
   };
 }

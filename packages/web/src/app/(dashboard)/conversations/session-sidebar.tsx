@@ -1,7 +1,7 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { Archive, Loader2, MessageSquarePlus, Pencil, Search, X } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Archive, ChevronRight, Loader2, MessageSquarePlus, Pencil, Search, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { authFetch } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
@@ -30,8 +30,11 @@ interface SessionSidebarProps {
   sessions: ChatSession[];
   selectedId: string | null;
   loading: boolean;
+  loadingMore?: boolean;
+  hasMore?: boolean;
   onSelect: (id: string) => void;
   onNewChat: (archiveCurrent?: boolean) => void;
+  onLoadMore?: () => void;
   onSessionUpdated?: () => void;
 }
 
@@ -39,15 +42,32 @@ interface SessionSidebarProps {
 /*  Helpers                                                            */
 /* ------------------------------------------------------------------ */
 
-function getDateGroup(dateStr: string): string {
+// Stable per-day key (local time, YYYY-MM-DD) used for grouping and expansion state.
+function getDayKey(dateStr: string): string {
   const date = new Date(dateStr);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-  if (diffDays === 0) return 'Today';
-  if (diffDays === 1) return 'Yesterday';
-  if (diffDays <= 7) return 'Previous 7 Days';
-  return 'Older';
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+// Human-friendly label for a day group: "Today", "Yesterday", or a localized date.
+function formatDayLabel(dateStr: string): string {
+  const date = new Date(dateStr);
+  const today = new Date();
+  const todayKey = getDayKey(today.toISOString());
+  const dayKey = getDayKey(dateStr);
+  if (dayKey === todayKey) return 'Today';
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+  if (dayKey === getDayKey(yesterday.toISOString())) return 'Yesterday';
+  const sameYear = date.getFullYear() === today.getFullYear();
+  return date.toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+    year: sameYear ? undefined : 'numeric',
+  });
 }
 
 function formatShortDate(dateStr: string): string {
@@ -63,8 +83,11 @@ export function SessionSidebar({
   sessions,
   selectedId,
   loading,
+  loadingMore = false,
+  hasMore = false,
   onSelect,
   onNewChat,
+  onLoadMore,
   onSessionUpdated,
 }: SessionSidebarProps) {
   const [renameSession, setRenameSession] = useState<ChatSession | null>(null);
@@ -96,22 +119,70 @@ export function SessionSidebar({
   }, [sessions, searchQuery]);
 
   // Sort sessions by createdAt descending (newest first)
-  const sorted = [...filtered].sort(
-    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+  const sorted = useMemo(
+    () =>
+      [...filtered].sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+      ),
+    [filtered],
   );
 
-  // Group sessions by date label
-  const groups = sorted.reduce<Record<string, ChatSession[]>>((acc, session) => {
-    const group = getDateGroup(session.createdAt);
-    const list = acc[group] ?? [];
-    list.push(session);
-    acc[group] = list;
-    return acc;
-  }, {});
+  // Group sessions by day (stable key) and preserve insertion order (already sorted desc).
+  const { dayKeys, groups } = useMemo(() => {
+    const map = new Map<string, ChatSession[]>();
+    for (const session of sorted) {
+      const key = getDayKey(session.createdAt);
+      const list = map.get(key) ?? [];
+      list.push(session);
+      map.set(key, list);
+    }
+    return { dayKeys: Array.from(map.keys()), groups: map };
+  }, [sorted]);
 
-  // Maintain consistent group ordering
-  const groupOrder = ['Today', 'Yesterday', 'Previous 7 Days', 'Older'];
-  const orderedGroups = groupOrder.filter((g) => groups[g] !== undefined);
+  // Track which day groups are expanded. Default: all collapsed.
+  const [expandedDays, setExpandedDays] = useState<Set<string>>(new Set());
+
+  const toggleDay = (key: string) => {
+    setExpandedDays((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  // When searching, auto-expand all matching day groups so results are visible.
+  // When the user is viewing a session, ensure its day group is expanded.
+  useEffect(() => {
+    if (searchQuery.trim()) {
+      setExpandedDays(new Set(dayKeys));
+      return;
+    }
+    if (selectedId) {
+      const selected = sorted.find((s) => s.id === selectedId);
+      if (selected) {
+        const key = getDayKey(selected.createdAt);
+        setExpandedDays((prev) => {
+          if (prev.has(key)) return prev;
+          const next = new Set(prev);
+          next.add(key);
+          return next;
+        });
+      }
+    }
+  }, [searchQuery, dayKeys, selectedId, sorted]);
+
+  const listRef = useRef<HTMLDivElement>(null);
+
+  // Trigger onLoadMore when the user scrolls within ~80px of the bottom.
+  const handleScroll = useCallback(() => {
+    const el = listRef.current;
+    if (!el || !onLoadMore || !hasMore || loadingMore) return;
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    if (distanceFromBottom < 80) {
+      onLoadMore();
+    }
+  }, [onLoadMore, hasMore, loadingMore]);
 
   const handleRename = (session: ChatSession) => {
     setRenameSession(session);
@@ -169,7 +240,7 @@ export function SessionSidebar({
       )}
 
       {/* Session list */}
-      <div className="flex-1 overflow-auto">
+      <div ref={listRef} onScroll={handleScroll} className="flex-1 overflow-auto">
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="size-5 animate-spin text-muted-foreground" />
@@ -179,40 +250,65 @@ export function SessionSidebar({
             {searchQuery ? 'No matching conversations' : 'No conversations yet'}
           </p>
         ) : (
-          orderedGroups.map((group) => (
-            <div key={group}>
-              <p className="px-3 py-2 text-xs font-medium text-muted-foreground">{group}</p>
-              {(groups[group] ?? []).map((session) => (
-                <ContextMenu key={session.id}>
-                  <ContextMenuTrigger asChild>
-                    <button
-                      onClick={() => {
-                        onSelect(session.id);
-                      }}
-                      className={cn(
-                        'mx-2 flex w-[calc(100%-16px)] cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-muted/50',
-                        selectedId === session.id && 'bg-muted',
-                        !session.isActive && 'opacity-60',
-                      )}
-                    >
-                      {!session.isActive && (
-                        <Archive className="size-3 shrink-0 text-muted-foreground" />
-                      )}
-                      <span className="truncate">
-                        {session.topic ?? `Session — ${formatShortDate(session.createdAt)}`}
-                      </span>
-                    </button>
-                  </ContextMenuTrigger>
-                  <ContextMenuContent>
-                    <ContextMenuItem onClick={() => handleRename(session)}>
-                      <Pencil className="mr-2 size-4" />
-                      Rename
-                    </ContextMenuItem>
-                  </ContextMenuContent>
-                </ContextMenu>
-              ))}
-            </div>
-          ))
+          dayKeys.map((dayKey) => {
+            const daySessions = groups.get(dayKey) ?? [];
+            const isExpanded = expandedDays.has(dayKey);
+            const label = formatDayLabel(daySessions[0]!.createdAt);
+            return (
+              <div key={dayKey}>
+                <button
+                  type="button"
+                  onClick={() => toggleDay(dayKey)}
+                  className="flex w-full items-center gap-1 px-3 py-2 text-left text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+                  aria-expanded={isExpanded}
+                >
+                  <ChevronRight
+                    className={cn(
+                      'size-3 shrink-0 transition-transform duration-200',
+                      isExpanded && 'rotate-90',
+                    )}
+                  />
+                  <span className="flex-1 truncate">{label}</span>
+                  <span className="text-[10px] tabular-nums opacity-60">{daySessions.length}</span>
+                </button>
+                {isExpanded &&
+                  daySessions.map((session) => (
+                    <ContextMenu key={session.id}>
+                      <ContextMenuTrigger asChild>
+                        <button
+                          onClick={() => {
+                            onSelect(session.id);
+                          }}
+                          className={cn(
+                            'mx-2 flex w-[calc(100%-16px)] cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors hover:bg-muted/50',
+                            selectedId === session.id && 'bg-muted',
+                            !session.isActive && 'opacity-60',
+                          )}
+                        >
+                          {!session.isActive && (
+                            <Archive className="size-3 shrink-0 text-muted-foreground" />
+                          )}
+                          <span className="truncate">
+                            {session.topic ?? `Session — ${formatShortDate(session.createdAt)}`}
+                          </span>
+                        </button>
+                      </ContextMenuTrigger>
+                      <ContextMenuContent>
+                        <ContextMenuItem onClick={() => handleRename(session)}>
+                          <Pencil className="mr-2 size-4" />
+                          Rename
+                        </ContextMenuItem>
+                      </ContextMenuContent>
+                    </ContextMenu>
+                  ))}
+              </div>
+            );
+          })
+        )}
+        {loadingMore && (
+          <div className="flex items-center justify-center py-3">
+            <Loader2 className="size-4 animate-spin text-muted-foreground" />
+          </div>
         )}
       </div>
 

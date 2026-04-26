@@ -86,6 +86,29 @@ const ZAI_CODING_SPEC: ProviderSpec = {
   pricing: null,
 };
 
+const GEMINI_SPEC: ProviderSpec = {
+  name: 'gemini',
+  displayName: 'Google Gemini',
+  modelPrefixes: ['gemini-'],
+  envKey: 'GEMINI_API_KEY',
+  defaultBaseUrl: 'https://generativelanguage.googleapis.com/v1beta/',
+  defaultModel: 'gemini-3-flash-preview',
+  supportsTools: true,
+  supportsThinking: false,
+  pricing: [
+    // Gemini 3 preview pricing — TODO: confirm against Google's pricing page
+    // before GA. Placeholders mirror the 2.5 family until official numbers ship.
+    { model: 'gemini-3-pro-preview', inputPerMillion: 1.25, outputPerMillion: 10.0 },
+    { model: 'gemini-3.1-pro-preview', inputPerMillion: 1.25, outputPerMillion: 10.0 },
+    { model: 'gemini-3-flash-preview', inputPerMillion: 0.3, outputPerMillion: 2.5 },
+    { model: 'gemini-3-flash-lite-preview', inputPerMillion: 0.1, outputPerMillion: 0.4 },
+    // Gemini 2.5 (still supported for existing agents)
+    { model: 'gemini-2.5-pro', inputPerMillion: 1.25, outputPerMillion: 10.0 },
+    { model: 'gemini-2.5-flash', inputPerMillion: 0.3, outputPerMillion: 2.5 },
+    { model: 'gemini-2.5-flash-lite', inputPerMillion: 0.1, outputPerMillion: 0.4 },
+  ],
+};
+
 const CUSTOM_SPEC: ProviderSpec = {
   name: 'custom',
   displayName: 'Custom',
@@ -101,6 +124,7 @@ const PROVIDERS: readonly ProviderSpec[] = [
   ANTHROPIC_SPEC,
   OPENAI_SPEC,
   ZAI_CODING_SPEC,
+  GEMINI_SPEC,
   CUSTOM_SPEC,
 ];
 

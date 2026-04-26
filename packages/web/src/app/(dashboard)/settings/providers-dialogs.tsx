@@ -78,6 +78,7 @@ export function CreateProviderDialog({
             onSubmit(data);
           }}
           className="flex flex-col gap-4"
+          autoComplete="off"
         >
           <div className="flex flex-col gap-2">
             <Label htmlFor="create-provider">Provider ID</Label>
@@ -86,6 +87,7 @@ export function CreateProviderDialog({
               name="provider"
               placeholder="e.g. openai, anthropic, custom-llm"
               required
+              autoComplete="off"
             />
             <p className="text-xs text-muted-foreground">
               Unique identifier for this provider (lowercase, no spaces).
@@ -98,11 +100,18 @@ export function CreateProviderDialog({
               name="displayName"
               placeholder="e.g. OpenAI, Anthropic, Custom LLM"
               required
+              autoComplete="off"
             />
           </div>
           <div className="flex flex-col gap-2">
             <Label htmlFor="create-apiKey">API Key</Label>
-            <PasswordInput id="create-apiKey" name="apiKey" placeholder="sk-..." required />
+            <PasswordInput
+              id="create-apiKey"
+              name="apiKey"
+              placeholder="sk-..."
+              required
+              autoComplete="new-password"
+            />
             <p className="text-xs text-muted-foreground">
               Encrypted at rest. Never displayed in full after saving.
             </p>
@@ -114,6 +123,7 @@ export function CreateProviderDialog({
               name="apiBaseUrl"
               type="url"
               placeholder="https://api.example.com/v1"
+              autoComplete="off"
             />
             <p className="text-xs text-muted-foreground">
               Only needed for custom or self-hosted endpoints.
@@ -187,6 +197,7 @@ export function EditProviderDialog({
             onSubmit(provider.provider, data);
           }}
           className="flex flex-col gap-4"
+          autoComplete="off"
         >
           <div className="flex flex-col gap-2">
             <Label>Provider ID</Label>
@@ -199,6 +210,7 @@ export function EditProviderDialog({
               name="displayName"
               defaultValue={provider.displayName}
               required
+              autoComplete="off"
             />
           </div>
           <div className="flex flex-col gap-2">
@@ -207,6 +219,7 @@ export function EditProviderDialog({
               id="edit-apiKey"
               name="apiKey"
               placeholder="Leave blank to keep current key"
+              autoComplete="new-password"
             />
             <p className="text-xs text-muted-foreground">
               Current key: {provider.apiKey}. Leave blank to keep it.
@@ -220,6 +233,7 @@ export function EditProviderDialog({
               type="url"
               defaultValue={provider.apiBaseUrl ?? ''}
               placeholder="https://api.example.com/v1"
+              autoComplete="off"
             />
           </div>
           <DialogFooter>

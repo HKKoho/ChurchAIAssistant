@@ -17,6 +17,12 @@ export interface RunOptions {
   readonly agentRunId?: string;
   /** Channel type: 'telegram' | 'slack' | 'whatsapp' | 'web' | 'internal'. Defaults to 'internal'. */
   readonly channel?: string;
+  /**
+   * DB Channel id used for channel-aware session resumption. When provided
+   * (and no `sessionId` is given), the runner will resume the active session
+   * for this user/agent/channel combination instead of creating a new one.
+   */
+  readonly channelId?: string;
   /** External platform chat identifier (e.g., Telegram chat ID). Defaults to 'system'. */
   readonly chatId?: string;
   /** User display name. Defaults to 'System'. */

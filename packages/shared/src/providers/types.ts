@@ -10,6 +10,12 @@ export interface ToolCallRequest {
   readonly id: string;
   readonly name: string;
   readonly arguments: Readonly<Record<string, unknown>>;
+  /**
+   * Provider-specific opaque payload that must be roundtripped through the message
+   * history. Gemini stores `{ google: { thoughtSignature: string } }` here so the
+   * signature can be echoed back on subsequent turns. Other providers ignore it.
+   */
+  readonly providerExtra?: Readonly<Record<string, unknown>>;
 }
 
 /** Token usage for a single LLM call. */

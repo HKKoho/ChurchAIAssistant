@@ -1,10 +1,12 @@
 import { Injectable } from '@nestjs/common';
-import { NotFoundError } from '@clawix/shared';
+import { NotFoundError, createLogger, getProviderSpec } from '@clawix/shared';
 
 import type { PaginatedResponse, PaginationInput } from '@clawix/shared';
 import { type AgentDefinition, Prisma } from '../generated/prisma/client.js';
 import { PrismaService } from '../prisma/prisma.service.js';
 import { buildPaginatedResponse, buildPaginationArgs, handlePrismaError } from './utils.js';
+
+const logger = createLogger('db:agent-definition');
 
 interface CreateAgentDefinitionData {
   readonly name: string;
@@ -52,14 +54,38 @@ export class AgentDefinitionRepository {
   /**
    * Find or create the built-in "default-worker" agent definition used
    * for anonymous sub-agent spawns.
+   *
+   * Resolves provider/model from the active default `ProviderConfig` and the
+   * provider registry. If an existing row is found with a provider that is no
+   * longer configured, it is healed in place (provider/model overwritten with
+   * the current default).
    */
-  async findOrCreateDefaultWorker(provider: string, model: string): Promise<AgentDefinition> {
+  async findOrCreateDefaultWorker(): Promise<AgentDefinition> {
     const existing = await this.prisma.agentDefinition.findFirst({
       where: { name: 'default-worker', role: 'worker' },
     });
 
+    // Fast path: existing row whose provider is still configured.
     if (existing) {
-      return existing;
+      const matching = await this.prisma.providerConfig.findFirst({
+        where: { provider: existing.provider, isEnabled: true },
+      });
+      if (matching) {
+        return existing;
+      }
+      logger.warn(
+        { defaultWorkerId: existing.id, staleProvider: existing.provider },
+        'default-worker provider is not configured; healing to current default',
+      );
+    }
+
+    const { provider, model } = await this.resolveDefaultWorkerProviderModel();
+
+    if (existing) {
+      return this.prisma.agentDefinition.update({
+        where: { id: existing.id },
+        data: { provider, model },
+      });
     }
 
     return this.prisma.agentDefinition.create({
@@ -70,16 +96,50 @@ export class AgentDefinitionRepository {
         role: 'worker',
         provider,
         model,
+        maxTokensPerRun: 50000,
         containerConfig: {
           image: process.env['AGENT_CONTAINER_IMAGE'] ?? 'clawix-agent:latest',
           cpuLimit: '0.5',
-          memoryLimit: '512m',
+          memoryLimit: '256m',
           timeoutSeconds: 300,
           readOnlyRootfs: false,
           allowedMounts: [],
         },
       },
     });
+  }
+
+  private async resolveDefaultWorkerProviderModel(): Promise<{
+    provider: string;
+    model: string;
+  }> {
+    const defaultProviderConfig = await this.prisma.providerConfig.findFirst({
+      where: { isDefault: true, isEnabled: true },
+    });
+    if (!defaultProviderConfig) {
+      throw new Error(
+        'No default provider configured. Set isDefault=true on a ProviderConfig row, ' +
+          'or configure DEFAULT_PROVIDER and re-run bootstrap.',
+      );
+    }
+
+    const provider = defaultProviderConfig.provider;
+    let model: string;
+    try {
+      model = getProviderSpec(provider).defaultModel;
+    } catch {
+      throw new Error(
+        `Default provider "${provider}" is not in the provider registry; ` +
+          'cannot resolve a default sub-agent model. Create a worker AgentDefinition explicitly.',
+      );
+    }
+    if (!model) {
+      throw new Error(
+        `Default provider "${provider}" has no defaultModel; ` +
+          'cannot resolve a default sub-agent model. Create a worker AgentDefinition explicitly.',
+      );
+    }
+    return { provider, model };
   }
 
   async findById(id: string): Promise<AgentDefinition> {

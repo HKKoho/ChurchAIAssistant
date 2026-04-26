@@ -246,6 +246,34 @@ describe('SessionManagerService', () => {
       expect(result[0]).toMatchObject({ role: 'assistant', toolCalls });
     });
 
+    it('preserves providerExtra on tool calls when loading from DB', async () => {
+      const toolCalls = [
+        {
+          id: 'c1',
+          name: 'search',
+          arguments: { q: 'x' },
+          providerExtra: { google: { thoughtSignature: 'sig-abc-123' } },
+        },
+      ];
+      const rows = [
+        makeSessionMessage({
+          role: 'assistant',
+          content: '',
+          toolCalls,
+          ordering: 0,
+        }),
+      ];
+      mockSessionMessage.findMany.mockResolvedValue(rows);
+
+      const result = await service.loadMessages('session-1');
+
+      expect(result[0]?.toolCalls?.[0]).toMatchObject({
+        id: 'c1',
+        name: 'search',
+        providerExtra: { google: { thoughtSignature: 'sig-abc-123' } },
+      });
+    });
+
     it('omits toolCallId and toolCalls when null', async () => {
       const rows = [
         makeSessionMessage({
@@ -346,6 +374,33 @@ describe('SessionManagerService', () => {
 
       expect(mockCreate).toHaveBeenCalledWith({
         data: expect.objectContaining({ toolCalls }),
+      });
+    });
+
+    it('preserves providerExtra on tool calls through JSON.parse(JSON.stringify()) round-trip', async () => {
+      mockSessionMessage.count.mockResolvedValue(0);
+      const toolCallsWithExtra = [
+        {
+          id: 'c1',
+          name: 'search',
+          arguments: { q: 'x' },
+          providerExtra: { google: { thoughtSignature: 'sig-abc-123' } },
+        },
+      ];
+      const mockCreate = vi.fn().mockResolvedValueOnce({ id: 'id-1' });
+      mockPrisma.$transaction.mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => {
+        const fakeTx = { sessionMessage: { create: mockCreate } };
+        return fn(fakeTx);
+      });
+
+      await service.saveMessages('session-1', [
+        { role: 'assistant' as const, content: '', toolCalls: toolCallsWithExtra as never },
+      ]);
+
+      const savedToolCalls = mockCreate.mock.calls[0]?.[0]?.data
+        ?.toolCalls as typeof toolCallsWithExtra;
+      expect(savedToolCalls[0]?.providerExtra).toEqual({
+        google: { thoughtSignature: 'sig-abc-123' },
       });
     });
 

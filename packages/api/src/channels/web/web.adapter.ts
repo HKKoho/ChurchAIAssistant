@@ -116,6 +116,15 @@ export function createWebAdapter(config: ChannelAdapterConfig): WebAdapterExtend
       sendToUser(message.recipientId, payload);
     },
 
+    async sendError(recipientId: string, code: string, message: string): Promise<void> {
+      logger.info({ recipientId, code }, 'Sending error to user');
+      const payload = serializeServerMessage({
+        type: 'error',
+        payload: { code, message },
+      });
+      sendToUser(recipientId, payload);
+    },
+
     async sendTyping(recipientId: string): Promise<void> {
       const payload = serializeServerMessage({
         type: 'typing.start',

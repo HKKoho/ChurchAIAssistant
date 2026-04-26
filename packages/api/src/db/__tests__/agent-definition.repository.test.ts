@@ -147,4 +147,112 @@ describe('AgentDefinitionRepository', () => {
       await expect(repo.delete('missing')).rejects.toThrow(NotFoundError);
     });
   });
+
+  describe('findOrCreateDefaultWorker', () => {
+    const existingWorker = {
+      ...mockAgent,
+      id: 'agent-default-worker',
+      name: 'default-worker',
+      role: 'worker',
+      provider: 'openai',
+      model: 'gpt-4o',
+    };
+
+    it('returns existing row unchanged when its provider is enabled', async () => {
+      mockPrisma.agentDefinition.findFirst.mockResolvedValue(existingWorker);
+      mockPrisma.providerConfig.findFirst.mockResolvedValueOnce({
+        id: 'pc-1',
+        provider: 'openai',
+        isEnabled: true,
+      });
+
+      const result = await repo.findOrCreateDefaultWorker();
+
+      expect(result).toEqual(existingWorker);
+      expect(mockPrisma.agentDefinition.update).not.toHaveBeenCalled();
+      expect(mockPrisma.agentDefinition.create).not.toHaveBeenCalled();
+      // Only the matching-provider lookup; the default lookup is not needed.
+      expect(mockPrisma.providerConfig.findFirst).toHaveBeenCalledTimes(1);
+      expect(mockPrisma.providerConfig.findFirst).toHaveBeenCalledWith({
+        where: { provider: 'openai', isEnabled: true },
+      });
+    });
+
+    it('heals existing row in place when its provider is not configured', async () => {
+      const staleWorker = {
+        ...existingWorker,
+        provider: 'anthropic',
+        model: 'claude-haiku-4-5-20251001',
+      };
+      const healedWorker = { ...staleWorker, provider: 'openai', model: 'gpt-4o' };
+      mockPrisma.agentDefinition.findFirst.mockResolvedValue(staleWorker);
+      // First lookup: anthropic is not configured.
+      mockPrisma.providerConfig.findFirst.mockResolvedValueOnce(null);
+      // Second lookup: default provider is openai.
+      mockPrisma.providerConfig.findFirst.mockResolvedValueOnce({
+        id: 'pc-1',
+        provider: 'openai',
+        isEnabled: true,
+        isDefault: true,
+      });
+      mockPrisma.agentDefinition.update.mockResolvedValue(healedWorker);
+
+      const result = await repo.findOrCreateDefaultWorker();
+
+      expect(result).toEqual(healedWorker);
+      expect(mockPrisma.agentDefinition.update).toHaveBeenCalledWith({
+        where: { id: staleWorker.id },
+        data: { provider: 'openai', model: 'gpt-4o' },
+      });
+      expect(mockPrisma.agentDefinition.create).not.toHaveBeenCalled();
+    });
+
+    it('creates a new row when no default-worker exists', async () => {
+      mockPrisma.agentDefinition.findFirst.mockResolvedValue(null);
+      mockPrisma.providerConfig.findFirst.mockResolvedValueOnce({
+        id: 'pc-1',
+        provider: 'openai',
+        isEnabled: true,
+        isDefault: true,
+      });
+      const created = { ...existingWorker, id: 'newly-created' };
+      mockPrisma.agentDefinition.create.mockResolvedValue(created);
+
+      const result = await repo.findOrCreateDefaultWorker();
+
+      expect(result).toEqual(created);
+      expect(mockPrisma.agentDefinition.update).not.toHaveBeenCalled();
+      expect(mockPrisma.agentDefinition.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          name: 'default-worker',
+          role: 'worker',
+          provider: 'openai',
+          model: 'gpt-4o',
+        }),
+      });
+    });
+
+    it('throws an actionable error when no default ProviderConfig exists', async () => {
+      mockPrisma.agentDefinition.findFirst.mockResolvedValue(null);
+      mockPrisma.providerConfig.findFirst.mockResolvedValue(null);
+
+      await expect(repo.findOrCreateDefaultWorker()).rejects.toThrow(
+        /No default provider configured/,
+      );
+    });
+
+    it('throws when the default provider is not in the registry (e.g., custom provider)', async () => {
+      mockPrisma.agentDefinition.findFirst.mockResolvedValue(null);
+      mockPrisma.providerConfig.findFirst.mockResolvedValueOnce({
+        id: 'pc-custom',
+        provider: 'my-private-llm',
+        isEnabled: true,
+        isDefault: true,
+      });
+
+      await expect(repo.findOrCreateDefaultWorker()).rejects.toThrow(
+        /not in the provider registry/,
+      );
+    });
+  });
 });
