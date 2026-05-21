@@ -1,0 +1,403 @@
+{
+  "id": "church",
+  "name": "⛪ Church Ministry",
+  "icon": "✝️",
+  "tagline": "AI-powered tools for Sunday School, pastoral care, sermons, Bible study & church administration",
+  "description": "A complete ministry intelligence pack for churches of all sizes and denominations. Equip your pastors, teachers, care workers, and administrators with specialist AI agents that understand the unique needs of church life — from crafting age-appropriate Sunday School lessons to preparing theologically grounded sermons, supporting pastoral care visits, and streamlining church administration. Built on love. Deployed with purpose.",
+  "color": "#7C3AED",
+  "color_secondary": "#F59E0B",
+  "version": "2.0.0",
+  "target_users": [
+    "Pastors & Preachers",
+    "Sunday School Teachers",
+    "Bible Study Facilitators",
+    "Pastoral Care Workers",
+    "Church Administrators",
+    "Worship Leaders",
+    "Children's Ministry Leaders",
+    "Youth Ministers"
+  ],
+  "agents": [
+    {
+      "id": "church-coordinator",
+      "name": "Grace — Church Coordinator",
+      "role": "coordinator",
+      "icon": "🕊️",
+      "description": "The central routing agent. Grace understands your ministry context and routes requests to the right specialist — sermon prep, Sunday School, pastoral care, admin, or worship planning.",
+      "skills": ["church-coordinator"],
+      "system_prompt_file": "SYSTEM_PROMPT.md",
+      "model_preference": "claude-opus",
+      "memory_scope": ["user", "org"],
+      "human_approval_triggers": [
+        "send_communication",
+        "publish_announcement",
+        "finalise_pastoral_plan",
+        "create_official_document"
+      ]
+    },
+    {
+      "id": "church-sermon-agent",
+      "name": "The Preacher — Sermon Prep Agent",
+      "role": "specialist",
+      "icon": "📜",
+      "description": "Supports pastors in every stage of sermon preparation: passage exegesis, theological research, outline structuring, illustration mining, application points, and closing prayers.",
+      "skills": ["church-sermon-prep"],
+      "model_preference": "claude-sonnet",
+      "memory_scope": ["user"],
+      "sub_agents": ["sermon-researcher", "sermon-illustrator", "sermon-reviewer"]
+    },
+    {
+      "id": "church-sunday-school-agent",
+      "name": "The Teacher — Sunday School Agent",
+      "role": "specialist",
+      "icon": "📚",
+      "description": "Creates complete, age-appropriate Sunday School lessons with biblical grounding, activities, discussion questions, memory verses, and parent take-home materials. Supports nursery through senior high.",
+      "skills": ["church-sunday-school"],
+      "model_preference": "claude-sonnet",
+      "memory_scope": ["user", "group"],
+      "sub_agents": ["lesson-designer", "activity-creator", "age-adapter"]
+    },
+    {
+      "id": "church-bible-study-agent",
+      "name": "The Scholar — Bible Study Agent",
+      "role": "specialist",
+      "icon": "📖",
+      "description": "Supports Bible study facilitators with deep passage study, multi-week series outlines, discussion question banks, cross-references, and historical-cultural context. Handles individual books, topical studies, and character studies.",
+      "skills": ["church-bible-study"],
+      "model_preference": "claude-sonnet",
+      "memory_scope": ["user", "group"],
+      "sub_agents": ["passage-analyst", "question-generator", "context-researcher"]
+    },
+    {
+      "id": "church-pastoral-care-agent",
+      "name": "The Shepherd — Pastoral Care Agent",
+      "role": "specialist",
+      "icon": "💛",
+      "description": "Assists pastoral care workers with compassionate response drafts, care visit planning, follow-up scheduling, Scripture for comfort, and referral guidance. Handles grief, crisis, illness, family conflict, and spiritual dryness. Always recommends professional support for clinical needs.",
+      "skills": ["church-pastoral-care"],
+      "model_preference": "claude-opus",
+      "memory_scope": ["user"],
+      "human_approval_triggers": ["finalise_care_plan", "crisis_escalation"],
+      "sub_agents": ["care-responder", "crisis-sentinel", "referral-advisor"]
+    },
+    {
+      "id": "church-worship-agent",
+      "name": "The Worshipper — Worship Planning Agent",
+      "role": "specialist",
+      "icon": "🎵",
+      "description": "Helps worship leaders plan liturgically coherent services: song selection aligned to sermon theme, service flow, Scripture readings, liturgical responses, and seasonal worship planning (Advent, Lent, Easter, Pentecost).",
+      "skills": ["church-worship-planner"],
+      "model_preference": "claude-sonnet",
+      "memory_scope": ["user", "org"]
+    },
+    {
+      "id": "church-comms-agent",
+      "name": "The Herald — Communications Agent",
+      "role": "specialist",
+      "icon": "📣",
+      "description": "Creates compelling church communications: social media posts, newsletter articles, event invitations, welcome emails for new members, prayer request circulars, and testimony features.",
+      "skills": ["church-communications"],
+      "model_preference": "claude-sonnet",
+      "memory_scope": ["user", "org"],
+      "human_approval_triggers": ["send_external_communication"]
+    },
+    {
+      "id": "church-prayer-agent",
+      "name": "The Intercessor — Prayer & Contemplation Agent",
+      "role": "specialist",
+      "icon": "🙏",
+      "description": "Guides prayer meetings, intercession lists, personal prayer journals, Lectio Divina, fasting guides, corporate prayer liturgies, prayer chain coordination, and contemplative prayer introductions.",
+      "skills": ["church-prayer-journal"],
+      "model_preference": "claude-sonnet",
+      "memory_scope": ["user", "org"]
+    },
+    {
+      "id": "church-admin-coordinator",
+      "name": "The Steward's Hub — Church Admin Coordinator",
+      "role": "admin-coordinator",
+      "icon": "🗂️",
+      "description": "Dedicated administrator-facing agent. Routes all operational tasks to the correct specialist sub-agent and assembles multi-domain outputs into unified packages. Spawned by Grace when any administrative intent is detected.",
+      "skills": ["church-admin", "church-admin-coordinator"],
+      "model_preference": "claude-sonnet",
+      "memory_scope": ["user", "org"],
+      "parent_agent": "church-coordinator",
+      "human_approval_triggers": [
+        "send_congregation_communication",
+        "publish_bulletin",
+        "finalise_hire_agreement",
+        "approve_financial_template",
+        "submit_governance_document"
+      ],
+      "sub_agents": [
+        "church-admin-event-planner",
+        "church-admin-bulletin-builder",
+        "church-admin-volunteer-coordinator",
+        "church-admin-finance-steward",
+        "church-admin-membership",
+        "church-admin-facility-booking",
+        "church-admin-meeting-secretary",
+        "church-admin-calendar"
+      ]
+    }
+  ],
+  "sub_agents": [
+    {
+      "id": "sermon-researcher",
+      "name": "Scripture & Theology Researcher",
+      "icon": "🔍",
+      "description": "Performs deep research on a passage: original language context, historical background, theological frameworks, commentary synthesis",
+      "parent_agent": "church-sermon-agent"
+    },
+    {
+      "id": "sermon-illustrator",
+      "name": "Illustration & Story Miner",
+      "icon": "💡",
+      "description": "Generates contemporary illustrations, analogies, and real-world stories that connect Scripture to modern congregational experience",
+      "parent_agent": "church-sermon-agent"
+    },
+    {
+      "id": "sermon-reviewer",
+      "name": "Theological Reviewer",
+      "icon": "✅",
+      "description": "Reviews sermon drafts for theological accuracy, denominational fit, balance, and pastoral sensitivity before pastor finalises",
+      "parent_agent": "church-sermon-agent"
+    },
+    {
+      "id": "lesson-designer",
+      "name": "Lesson Structure Designer",
+      "icon": "🗂️",
+      "description": "Structures Sunday School lessons with proper timing, learning objectives, and biblical scaffolding",
+      "parent_agent": "church-sunday-school-agent"
+    },
+    {
+      "id": "activity-creator",
+      "name": "Creative Activity Generator",
+      "icon": "🎨",
+      "description": "Generates crafts, games, drama scripts, and interactive activities matched to the lesson and age group",
+      "parent_agent": "church-sunday-school-agent"
+    },
+    {
+      "id": "age-adapter",
+      "name": "Age-Appropriate Content Adapter",
+      "icon": "👶",
+      "description": "Rewrites theological content at the right cognitive and emotional level for nursery (2–4), kindergarten (5–6), junior (7–9), primary (10–12), youth (13–17)",
+      "parent_agent": "church-sunday-school-agent"
+    },
+    {
+      "id": "passage-analyst",
+      "name": "Passage Deep-Dive Analyst",
+      "icon": "📜",
+      "description": "Analyses Bible passages verse-by-verse: Greek/Hebrew word meanings, narrative structure, theological themes, intertextual links",
+      "parent_agent": "church-bible-study-agent"
+    },
+    {
+      "id": "question-generator",
+      "name": "Discussion Question Generator",
+      "icon": "❓",
+      "description": "Creates observation, interpretation, and application questions at multiple depth levels for small group discussion",
+      "parent_agent": "church-bible-study-agent"
+    },
+    {
+      "id": "context-researcher",
+      "name": "Historical-Cultural Context Researcher",
+      "icon": "🏛️",
+      "description": "Provides historical, cultural, and geographical context that illuminates why a passage was written and what it meant to its original audience",
+      "parent_agent": "church-bible-study-agent"
+    },
+    {
+      "id": "care-responder",
+      "name": "Pastoral Care Response Drafter",
+      "icon": "💬",
+      "description": "Drafts compassionate, theologically grounded responses for pastoral conversations, emails, and visit follow-ups",
+      "parent_agent": "church-pastoral-care-agent"
+    },
+    {
+      "id": "crisis-sentinel",
+      "name": "Crisis Detection & Escalation Sentinel",
+      "icon": "🚨",
+      "description": "Non-bypassable. Monitors all pastoral conversations for crisis indicators (self-harm, abuse, acute mental health). Routes to human pastor + provides crisis resources immediately.",
+      "parent_agent": "church-pastoral-care-agent",
+      "bypass": false
+    },
+    {
+      "id": "referral-advisor",
+      "name": "Professional Referral Advisor",
+      "icon": "🏥",
+      "description": "Identifies when pastoral situations require clinical, legal, or social services referral and provides guidance on how to make the handoff compassionately",
+      "parent_agent": "church-pastoral-care-agent"
+    },
+    {
+      "id": "church-admin-event-planner",
+      "name": "The Organiser — Event Planning",
+      "icon": "📅",
+      "description": "Complete event planning packages: project timelines, team structure, budget frameworks, risk assessment, accessibility checklists, run sheets, and post-event review templates. Handles all event types from prayer breakfast to community Christmas dinner.",
+      "skill": "church-admin-event-planner",
+      "parent_agent": "church-admin-coordinator",
+      "model_preference": "claude-sonnet"
+    },
+    {
+      "id": "church-admin-bulletin-builder",
+      "name": "The Publisher — Bulletin & Newsletter Builder",
+      "icon": "📰",
+      "description": "Assembles complete church bulletins, orders of service, special programs (Christmas/Easter/Baptism/Funeral), and monthly newsletters. Produces print-ready and digital-ready formatted output. Includes QA checklist.",
+      "skill": "church-admin-bulletin-builder",
+      "parent_agent": "church-admin-coordinator",
+      "model_preference": "claude-haiku",
+      "human_approval_triggers": ["publish_bulletin", "distribute_newsletter"]
+    },
+    {
+      "id": "church-admin-volunteer-coordinator",
+      "name": "The Coordinator — Volunteer Management",
+      "icon": "🙋",
+      "description": "Builds and manages volunteer rotas across all ministry teams, generates role descriptions, manages DBS/safeguarding compliance flags, produces onboarding workflows, monitors burnout risk, and creates appreciation programmes.",
+      "skill": "church-admin-volunteer-coordinator",
+      "parent_agent": "church-admin-coordinator",
+      "model_preference": "claude-sonnet"
+    },
+    {
+      "id": "church-admin-finance-steward",
+      "name": "The Treasurer's Assistant — Finance Steward",
+      "icon": "💰",
+      "description": "Generates budget frameworks, monthly treasurer report templates, weekly giving summaries, Gift Aid administration (UK), stewardship campaign materials, expense claim forms, grant application frameworks, and benevolence fund guidelines. NEVER stores actual financial data.",
+      "skill": "church-admin-finance-steward",
+      "parent_agent": "church-admin-coordinator",
+      "model_preference": "claude-sonnet",
+      "data_sensitivity": "financial",
+      "human_approval_triggers": ["approve_budget", "distribute_financial_report"]
+    },
+    {
+      "id": "church-admin-membership",
+      "name": "The Welcomer — Membership & Visitor Management",
+      "icon": "👥",
+      "description": "Manages the full visitor-to-member journey: connection card templates, visitor follow-up sequences, membership pathways, status tracking categories, transfer letters, inactive member outreach, and small group connection matching. GDPR-compliant — no personal data stored.",
+      "skill": "church-admin-membership",
+      "parent_agent": "church-admin-coordinator",
+      "model_preference": "claude-sonnet",
+      "data_sensitivity": "membership",
+      "human_approval_triggers": ["send_member_communication"]
+    },
+    {
+      "id": "church-admin-facility-booking",
+      "name": "The Keeper — Facility Booking",
+      "icon": "🏛️",
+      "description": "Manages all church space: internal booking forms, external hire agreements, pricing frameworks, room setup guides, key management, facility inspection checklists, and accessibility reviews. Produces legally-sound hire agreement templates.",
+      "skill": "church-admin-facility-booking",
+      "parent_agent": "church-admin-coordinator",
+      "model_preference": "claude-haiku",
+      "human_approval_triggers": ["finalise_hire_agreement"]
+    },
+    {
+      "id": "church-admin-meeting-secretary",
+      "name": "The Scribe — Meeting Secretary",
+      "icon": "📝",
+      "description": "Produces professional meeting documentation for all governance levels: agenda builders, structured minutes templates, action log management, AGM complete packages (notice, annual report, accounts framework), and annual governance health checks.",
+      "skill": "church-admin-meeting-secretary",
+      "parent_agent": "church-admin-coordinator",
+      "model_preference": "claude-sonnet",
+      "human_approval_triggers": ["finalise_agm_documents", "distribute_minutes"]
+    },
+    {
+      "id": "church-admin-calendar",
+      "name": "The Timekeeper — Calendar Management",
+      "icon": "📆",
+      "description": "Plans the full ministry year: annual calendar framework aligned to liturgical and civil calendars, monthly calendar sheets, conflict detection, seasonal countdown guides (Christmas, Easter, Lent), and multi-format publishing (digital, print, website, .ics).",
+      "skill": "church-admin-calendar",
+      "parent_agent": "church-admin-coordinator",
+      "model_preference": "claude-haiku"
+    }
+  ],
+  "inspiration_prompts": [
+    {
+      "icon": "📖",
+      "title": "Sunday School Lesson",
+      "prompt": "Create a complete Sunday School lesson on the story of David and Goliath for children aged 7–9, including a craft activity and memory verse"
+    },
+    {
+      "icon": "📜",
+      "title": "Sermon Outline",
+      "prompt": "Help me prepare a full sermon outline on John 11 (Lazarus) for a congregation facing grief and loss"
+    },
+    {
+      "icon": "📚",
+      "title": "Bible Study Series",
+      "prompt": "Design a 6-week small group Bible study series on the Psalms of Ascent (Psalms 120–134) with discussion questions"
+    },
+    {
+      "icon": "💛",
+      "title": "Pastoral Care Visit",
+      "prompt": "Help me prepare for a pastoral care visit with a family who lost their father three weeks ago"
+    },
+    {
+      "icon": "📋",
+      "title": "Church Event Planning",
+      "prompt": "Create a complete planning checklist and volunteer rota for our church's Christmas community dinner for 150 people"
+    },
+    {
+      "icon": "🎵",
+      "title": "Worship Set Planning",
+      "prompt": "Plan a worship set for Pentecost Sunday aligned to a sermon on Acts 2, including song suggestions and liturgical flow"
+    },
+    {
+      "icon": "📣",
+      "title": "Church Communication",
+      "prompt": "Write a warm welcome email for new members who attended their first service last Sunday"
+    },
+    {
+      "icon": "🙏",
+      "title": "Prayer Meeting Guide",
+      "prompt": "Create a structured 45-minute prayer meeting guide for our midweek prayer group focused on intercession for our city"
+    },
+    {
+      "icon": "📅",
+      "title": "Full Event Plan",
+      "prompt": "Create a complete event plan for a community Christmas dinner for 120 people, 6 weeks away, including team roles, timeline, budget template, and run sheet"
+    },
+    {
+      "icon": "📰",
+      "title": "Build Sunday Bulletin",
+      "prompt": "Build this Sunday's bulletin: sermon is 'Walking on Water' from Matthew 14, preacher is John Smith, worship led by Sarah. Announcements: Alpha starts Tuesday, Harvest lunch Sunday 23rd, new small group forming"
+    },
+    {
+      "icon": "🙋",
+      "title": "Volunteer Rota",
+      "prompt": "Create a 4-week volunteer rota for our Welcome Team with 8 volunteers — 3 people per Sunday with rotating leads"
+    },
+    {
+      "icon": "💰",
+      "title": "Annual Budget Framework",
+      "prompt": "Generate a complete annual church budget framework template with all income and expenditure categories for a congregation of 150 people"
+    },
+    {
+      "icon": "👥",
+      "title": "Visitor Follow-Up Plan",
+      "prompt": "Create a complete 3-month visitor follow-up plan and communication sequence for our church"
+    },
+    {
+      "icon": "🏛️",
+      "title": "Hall Hire Agreement",
+      "prompt": "Generate an external hall hire agreement template for our church building including safeguarding, cancellation policy, and terms"
+    },
+    {
+      "icon": "📝",
+      "title": "Leadership Meeting",
+      "prompt": "Create an agenda for our monthly elders meeting — main items: review the Alpha course launch, youth worker appointment, and Q3 budget report"
+    },
+    {
+      "icon": "📆",
+      "title": "Annual Ministry Calendar",
+      "prompt": "Help me plan our annual ministry calendar for next year — we have a sermon series on Psalms in Lent and are planning an Alpha course in September"
+    }
+  ],
+  "governance": {
+    "human_approval_required": true,
+    "audit_log": true,
+    "sensitive_data_handling": "pastoral_care_names_excluded_from_memory",
+    "crisis_protocol": "immediate_escalation_to_human_pastor",
+    "denomination_neutrality": true,
+    "admin_sub_agents": "8 specialist sub-agents under church-admin-coordinator"
+  },
+  "channels": ["web", "telegram", "whatsapp"],
+  "languages": ["en", "zh-HK", "zh-TW", "ko", "es", "pt", "fr"],
+  "created_by": "aibyml-ngo / ChurchAIAdmin (HKKoho)",
+  "license": "MIT"
+}
