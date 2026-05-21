@@ -1,7 +1,6 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
 import { PanelLeftClose, PanelLeftOpen, Square } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { authFetch } from '@/lib/auth';
@@ -13,8 +12,13 @@ import { SessionSidebar } from './session-sidebar';
 const SIDEBAR_STORAGE_KEY = 'conversations-sidebar-open';
 
 export default function ConversationsPage() {
-  const searchParams = useSearchParams();
-  const explorePrompt = searchParams.get('prompt') ?? '';
+  const [explorePrompt, setExplorePrompt] = useState('');
+
+  // Read ?prompt= param client-side to avoid Suspense requirement
+  useEffect(() => {
+    const p = new URLSearchParams(window.location.search).get('prompt');
+    if (p) setExplorePrompt(p);
+  }, []);
 
   // Initialize to false for SSR, then sync from localStorage after hydration
   const [sidebarOpen, setSidebarOpen] = useState(false);
