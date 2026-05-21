@@ -128,14 +128,20 @@ export function ChatInput({
   disabled,
   isConnected,
   userMessages = [],
+  initialValue = '',
 }: {
   onSend: (content: string) => boolean | void;
   disabled: boolean;
   isConnected: boolean;
   userMessages?: string[];
+  initialValue?: string;
 }) {
-  const [value, setValue] = useState('');
+  const [value, setValue] = useState(initialValue);
   const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    if (initialValue) setValue(initialValue);
+  }, [initialValue]);
   const [showCommands, setShowCommands] = useState(false);
   const [selectedCommandIndex, setSelectedCommandIndex] = useState(0);
   const [slashItems, setSlashItems] = useState<SlashItem[]>(builtinCommands);
