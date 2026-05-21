@@ -80,7 +80,7 @@ function LoginForm() {
           <div className="flex size-6 items-center justify-center rounded-md bg-primary text-primary-foreground">
             <GalleryVerticalEnd className="size-4" />
           </div>
-          <span className="text-sm font-medium">Clawix</span>
+          <span className="text-sm font-medium">Church Admin AI Assistant</span>
         </div>
 
         {/* Login form */}
@@ -88,7 +88,7 @@ function LoginForm() {
           <div className="flex w-full max-w-[320px] flex-col gap-7">
             {/* Header */}
             <div className="flex flex-col gap-1 text-center">
-              <h1 className="text-2xl font-bold tracking-tight">Login to Clawix</h1>
+              <h1 className="text-2xl font-bold tracking-tight">Login to Admin Assistant</h1>
               <p className="text-sm text-muted-foreground">
                 Enter your email below to login to your account
               </p>

@@ -53,11 +53,11 @@ export function decrypt(ciphertext: string): string {
 /**
  * Returns a masked representation of an API key suitable for display.
  * Keys of 8 characters or fewer are fully masked as `****`.
- * Longer keys show a prefix hint and the last 4 characters: `sk-***...1234`.
+ * Longer keys show the first 4 characters and the last 4 characters: `AIza***...1234`.
  */
 export function maskApiKey(key: string): string {
   if (key.length <= 8) {
     return '****';
   }
-  return `sk-***...${key.slice(-4)}`;
+  return `${key.slice(0, 4)}***...${key.slice(-4)}`;
 }
