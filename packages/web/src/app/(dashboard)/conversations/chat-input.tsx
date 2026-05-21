@@ -32,20 +32,32 @@ const builtinCommands: SlashItem[] = [
 
 const suggestions = [
   {
-    title: 'Draft a launch announcement',
-    description: 'for next quarter’s product release',
+    icon: ‘📜’,
+    title: ‘Prepare a Sermon’,
+    description: "Help me write this Sunday’s message",
+    prompt:
+      "Help me prepare a sermon outline and research for this Sunday’s message. What passage or theme are you preaching on?",
   },
   {
-    title: 'Brainstorm campaign ideas',
-    description: 'targeting SMB customers on LinkedIn',
+    icon: ‘📚’,
+    title: ‘Sunday School Lesson’,
+    description: ‘Create a complete lesson for my class’,
+    prompt:
+      ‘Create a complete Sunday School lesson for my class. What age group are you teaching and do you have a Scripture or theme in mind?’,
   },
   {
-    title: 'Summarize this month’s pipeline',
-    description: 'with top deals and risks called out',
+    icon: ‘💛’,
+    title: ‘Pastoral Support’,
+    description: ‘Help me prepare for a care visit’,
+    prompt:
+      ‘Help me prepare for a pastoral care visit. Can you briefly describe the situation so I can help you prepare well?’,
   },
   {
-    title: 'Write a customer follow-up email',
-    description: 'after a discovery call',
+    icon: ‘📋’,
+    title: ‘Church Admin’,
+    description: ‘Events, bulletins, rotas & more’,
+    prompt:
+      ‘Help me with a church administration task — event planning, building a bulletin, volunteer rota, meeting agenda, or anything else. What do you need and when is your deadline?’,
   },
 ];
 
@@ -54,10 +66,12 @@ const suggestions = [
 /* ------------------------------------------------------------------ */
 
 function SuggestionCard({
+  icon,
   title,
   description,
   onClick,
 }: {
+  icon: string;
   title: string;
   description: string;
   onClick: () => void;
@@ -65,10 +79,11 @@ function SuggestionCard({
   return (
     <button
       onClick={onClick}
-      className="group flex cursor-pointer flex-col items-start justify-center rounded-lg border border-l-[3px] border-l-primary/50 p-4 text-left transition-all duration-200 hover:-translate-y-0.5 hover:scale-[1.02] hover:border-primary/40 hover:bg-primary/10 hover:shadow-[0_8px_24px_-8px_rgba(217,119,6,0.35)]"
+      className="group flex cursor-pointer flex-col items-start gap-2 rounded-lg border border-l-[3px] border-l-primary/50 p-4 text-left transition-all duration-200 hover:-translate-y-0.5 hover:scale-[1.02] hover:border-primary/40 hover:bg-primary/10 hover:shadow-[0_8px_24px_-8px_rgba(217,119,6,0.35)]"
     >
+      <span className="text-2xl leading-none">{icon}</span>
       <span className="text-sm font-semibold tracking-tight">{title}</span>
-      <span className="text-sm text-muted-foreground">{description}</span>
+      <span className="text-xs text-muted-foreground">{description}</span>
     </button>
   );
 }
@@ -80,17 +95,22 @@ function SuggestionCard({
 export function EmptyState({ onSelectSuggestion }: { onSelectSuggestion: (text: string) => void }) {
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-8">
-      <div className="flex size-12 items-center justify-center rounded-full border border-foreground/20 bg-muted">
-        <Bot className="size-6" />
+      <div className="flex flex-col items-center gap-2 text-center">
+        <span className="text-4xl leading-none">🕊️</span>
+        <h2 className="text-lg font-semibold tracking-tight">Grace — Church AI Assistant</h2>
+        <p className="max-w-xs text-sm text-muted-foreground">
+          How can I help your ministry today?
+        </p>
       </div>
-      <div className="grid w-full max-w-[768px] grid-cols-2 gap-2">
+      <div className="grid w-full max-w-[768px] grid-cols-2 gap-3">
         {suggestions.map((s) => (
           <SuggestionCard
             key={s.title}
+            icon={s.icon}
             title={s.title}
             description={s.description}
             onClick={() => {
-              onSelectSuggestion(`${s.title} ${s.description}`);
+              onSelectSuggestion(s.prompt);
             }}
           />
         ))}
