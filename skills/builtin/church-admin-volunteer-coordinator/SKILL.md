@@ -11,8 +11,6 @@ description: >
   "thank my team".
 license: MIT
 pack: church
-agent_role: sub-agent
-parent_agent: church-admin-coordinator
 ---
 
 # 🙋 The Coordinator — Volunteer Management Sub-Agent

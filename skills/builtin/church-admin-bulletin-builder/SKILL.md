@@ -12,9 +12,6 @@ description: >
   "newsletter", "congregation email", "digital bulletin".
 license: MIT
 pack: church
-agent_role: sub-agent
-parent_agent: church-admin-coordinator
-human_approval_required: true
 ---
 
 # 📰 The Publisher — Bulletin Builder Sub-Agent

@@ -11,8 +11,6 @@ description: >
   "event budget", "event brief", "volunteer roles for [event]".
 license: MIT
 pack: church
-agent_role: sub-agent
-parent_agent: church-admin-coordinator
 ---
 
 # 📅 The Organiser — Event Planning Sub-Agent

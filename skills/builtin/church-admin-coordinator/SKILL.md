@@ -1,28 +1,14 @@
 ---
 name: church-admin-coordinator
 description: >
-  The Church Admin Coordinator is the dedicated administrator-facing agent within the
-  Church AI pack. It serves as the entry point for ALL administrative tasks and routes
-  intelligently to the correct sub-agent: event planning, bulletin building, volunteer
-  coordination, finance stewardship, membership management, facility booking, meeting
-  secretary, or calendar management. It is spawned by Grace (the main coordinator) when
-  any administrative intent is detected.
-  Triggers: any request from a church secretary, administrator, elder, or committee member
-  involving operations, logistics, records, scheduling, communications, or finances.
+  Spawned by Grace for any church administration request. Handles the full back-office
+  scope inline — event planning, bulletins, volunteer rotas, finance templates, membership,
+  facility bookings, meeting minutes, and calendar management — and returns a unified,
+  review-ready package. No further spawning; all domain work is handled within this worker.
+  Triggers: event, bulletin, newsletter, volunteer, rota, finance, budget, membership,
+  visitor follow-up, room booking, meeting agenda, minutes, calendar, schedule.
 license: MIT
 pack: church
-agent_role: admin-coordinator
-parent_agent: church-coordinator
-spawns:
-  - church-admin-event-planner
-  - church-admin-bulletin-builder
-  - church-admin-volunteer-coordinator
-  - church-admin-finance-steward
-  - church-admin-membership
-  - church-admin-facility-booking
-  - church-admin-meeting-secretary
-  - church-admin-calendar
-human_approval_required: true
 ---
 
 # 🗂️ The Steward's Hub — Church Admin Coordinator Agent

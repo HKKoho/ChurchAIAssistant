@@ -9,8 +9,6 @@ description: >
   "key", "hire agreement", "external booking", "room available", "space for".
 license: MIT
 pack: church
-agent_role: sub-agent
-parent_agent: church-admin-coordinator
 ---
 
 # 🏛️ The Keeper — Facility Booking Sub-Agent

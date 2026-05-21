@@ -10,8 +10,6 @@ description: >
   "announcement", "admin", "calendar", "AGM", "church meeting", "membership".
 license: MIT
 pack: church
-agent_role: specialist
-human_approval_required: true
 ---
 
 # 📋 The Steward — Church Administration Skill

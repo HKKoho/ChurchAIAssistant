@@ -11,7 +11,6 @@ description: >
   "craft", "children's church", "VBS", "kids church", "junior church".
 license: MIT
 pack: church
-agent_role: specialist
 source_inspiration: HKKoho/ChurchAIAdmin
 ---
 

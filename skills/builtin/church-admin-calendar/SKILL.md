@@ -9,8 +9,6 @@ description: >
   "when should we", "this month's schedule", "annual planning", "church diary".
 license: MIT
 pack: church
-agent_role: sub-agent
-parent_agent: church-admin-coordinator
 ---
 
 # 📆 The Timekeeper — Calendar Management Sub-Agent

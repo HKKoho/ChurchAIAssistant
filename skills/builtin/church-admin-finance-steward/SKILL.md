@@ -12,9 +12,6 @@ description: >
   "gift aid", "donation", "accounting", "financial report", "grant", "expense claim".
 license: MIT
 pack: church
-agent_role: sub-agent
-parent_agent: church-admin-coordinator
-human_approval_required: true
 data_sensitivity: financial
 ---
 

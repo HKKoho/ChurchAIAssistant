@@ -11,7 +11,6 @@ description: >
   "bereavement", "marriage difficulty", "spiritual dryness", "I'm worried about".
 license: MIT
 pack: church
-agent_role: specialist
 safety_critical: true
 ---
 

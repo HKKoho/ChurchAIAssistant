@@ -9,7 +9,6 @@ description: >
   "Lent", "Easter worship", "service flow", "order of service", "responsive reading".
 license: MIT
 pack: church
-agent_role: specialist
 ---
 
 # 🎵 The Worshipper — Worship Planning Skill

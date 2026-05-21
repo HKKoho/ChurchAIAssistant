@@ -9,8 +9,6 @@ description: >
   "welcome email", "invitation", "press release", "testimony", "church post".
 license: MIT
 pack: church
-agent_role: specialist
-human_approval_required: true
 ---
 
 # 📣 The Herald — Church Communications Skill

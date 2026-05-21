@@ -10,7 +10,6 @@ description: >
   "prayer list", "fasting", "quiet time", "contemplative prayer", "Lectio Divina".
 license: MIT
 pack: church
-agent_role: specialist
 ---
 
 # 🙏 The Intercessor — Prayer & Contemplation Skill

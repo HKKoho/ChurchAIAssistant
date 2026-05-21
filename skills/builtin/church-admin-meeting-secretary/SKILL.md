@@ -9,8 +9,6 @@ description: >
   "trustees", "deacons", "leadership meeting", "action log", "governance".
 license: MIT
 pack: church
-agent_role: sub-agent
-parent_agent: church-admin-coordinator
 ---
 
 # 📝 The Scribe — Meeting Secretary Sub-Agent

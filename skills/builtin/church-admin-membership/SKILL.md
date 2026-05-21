@@ -11,8 +11,6 @@ description: >
   "inactive", "new person", "joining the church", "transfer", "small group connection".
 license: MIT
 pack: church
-agent_role: sub-agent
-parent_agent: church-admin-coordinator
 data_sensitivity: membership
 ---
 

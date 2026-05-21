@@ -9,7 +9,6 @@ description: >
   "passage analysis", "discussion questions", "inductive Bible study".
 license: MIT
 pack: church
-agent_role: specialist
 ---
 
 # 📖 The Scholar — Bible Study Skill

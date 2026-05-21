@@ -9,7 +9,6 @@ description: >
   Triggers: "sermon", "preach", "message", "homily", "pulpit", "Sunday message", "talk".
 license: MIT
 pack: church
-agent_role: specialist
 ---
 
 # 📜 The Preacher — Sermon Preparation Skill
